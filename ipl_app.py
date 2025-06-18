@@ -4,9 +4,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import sklearn
+from from joblib import load import load
+
+
 
 # Load model
-pipe = pickle.load(open('mdl.pkl', 'rb'))
+pipe = load('mdl.pkl')
 
 teams = [
     'Sunrisers Hyderabad', 'Mumbai Indians', 'Royal Challengers Bangalore',
