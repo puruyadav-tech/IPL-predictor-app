@@ -1,52 +1,42 @@
 import streamlit as st
 import pandas as pd
-import pickle
 import os
+from joblib import load
+import matplotlib.pyplot as plt
 
-# --- BLUE THEME INLINE CSS ---
+# --- Custom CSS for IPL Blue Theme ---
 st.markdown("""
     <style>
-    body {
-      background: linear-gradient(to bottom right, #1e3c72, #2a5298);
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .title {
-      background: linear-gradient(to right, #fbbf24, #f97316, #ffffff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-size: 3.5rem;
-      text-align: center;
-      font-weight: 800;
-      margin-top: 0.5rem;
-    }
-    .subtitle {
-      text-align: center;
-      font-size: 1.2rem;
-      color: #dddddd;
-      margin-bottom: 2rem;
-    }
-    .card {
-      background-color: rgba(255, 255, 255, 0.05);
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
-    }
-    .result-card {
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 20px;
-      margin-top: 30px;
-      text-align: center;
-      font-size: 1.4rem;
-      color: #f1f1f1;
-      box-shadow: 0 0 25px rgba(255,255,255,0.1);
-    }
+        .stApp {
+            background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
+            color: white;
+        }
+        h1, h2, h3 {
+            color: orange !important;
+            text-align: center;
+        }
+        .css-1v0mbdj, .stButton>button {
+            background-color: #1f2c3b;
+            color: white;
+            border: 1px solid #ff9800;
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+        }
+        .stNumberInput>div>input {
+            background-color: #1f2c3b !important;
+            color: white !important;
+        }
+        .stSelectbox>div>div {
+            background-color: #1f2c3b !important;
+            color: white !important;
+        }
+        .stMarkdown {
+            color: white;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# --- TEAM LIST ---
+# --- Data Setup ---
 teams = [
     'Sunrisers Hyderabad', 'Mumbai Indians', 'Royal Challengers Bangalore',
     'Kolkata Knight Riders', 'Kings XI Punjab', 'Chennai Super Kings',
@@ -60,25 +50,21 @@ cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
           'Visakhapatnam', 'Pune', 'Raipur', 'Ranchi', 'Abu Dhabi',
           'Sharjah', 'Mohali', 'Bengaluru']
 
-# --- PAGE HEADER ---
-st.set_page_config(page_title="IPL Win Predictor", layout="wide")
-st.markdown("<h1 class='title'>🏏 IPL Win Predictor</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Predict the match outcome based on live match stats</p>", unsafe_allow_html=True)
+# --- Title and Header ---
+st.title('🏏 IPL Win Predictor')
+st.markdown("### Predict the match outcome based on live match stats")
 
-# --- TEAM SELECTION ---
-st.markdown("<div class='card'>", unsafe_allow_html=True)
+# --- Team Selection ---
 col1, col2 = st.columns(2)
 with col1:
     batting_team = st.selectbox('Select Batting Team', sorted(teams))
 with col2:
     bowling_team = st.selectbox('Select Bowling Team', sorted(teams))
-st.markdown("</div>", unsafe_allow_html=True)
 
 if batting_team == bowling_team:
     st.warning("⚠️ Batting and Bowling teams must be different.")
 
-# --- MATCH DETAILS ---
-st.markdown("<div class='card'>", unsafe_allow_html=True)
+# --- Match Inputs ---
 selected_city = st.selectbox('Select Host City', sorted(cities))
 target = st.number_input('🎯 Target Score', min_value=0, step=1)
 
@@ -89,18 +75,23 @@ with col4:
     overs = st.number_input('🕒 Overs Completed', min_value=0.0, step=0.1, format="%.1f")
 with col5:
     wickets = st.number_input('💥 Wickets Fallen', min_value=0, max_value=10, step=1)
-st.markdown("</div>", unsafe_allow_html=True)
 
-# --- PREDICT WIN ---
-if st.button("🚀 Predict Match Outcome"):
+# --- Prediction ---
+if st.button('🔥 Predict Win Probability'):
     if batting_team == bowling_team:
-        st.error("❌ Batting and bowling teams cannot be the same.")
-    elif not os.path.exists("mdl.pkl"):
-        st.error("Model file 'mdl.pkl' not found.")
+        st.error("Batting and bowling teams cannot be the same.")
     else:
-        with open('mdl.pkl', 'rb') as f:
-            pipe = pickle.load(f)
+        if not os.path.exists("mdl.pkl"):
+            st.error("❌ Model file 'mdl.pkl' not found.")
+            st.stop()
 
+        try:
+            pipe = load('mdl.pkl')
+        except Exception as e:
+            st.error(f"❗ Model loading error: {e}")
+            st.stop()
+
+        # --- Calculations ---
         runs_left = target - score
         balls_left = 120 - int(overs * 6)
         wickets_remaining = 10 - wickets
@@ -119,12 +110,29 @@ if st.button("🚀 Predict Match Outcome"):
             'rrr': [rrr]
         })
 
-        result = pipe.predict_proba(input_df)
-        loss = result[0][0]
-        win = result[0][1]
+        try:
+            result = pipe.predict_proba(input_df)
+            loss = result[0][0]
+            win = result[0][1]
 
-        st.markdown(
-            f"<div class='result-card'><h3>🏆 {batting_team} Chance to Win: {round(win*100)}%</h3>"
-            f"<h4>💀 {bowling_team} Chance: {round(loss*100)}%</h4></div>",
-            unsafe_allow_html=True
-        )
+            # --- Matplotlib Pie Chart ---
+            fig, ax = plt.subplots()
+            ax.pie([win, loss], labels=[batting_team, bowling_team],
+                   autopct='%1.1f%%', startangle=90,
+                   colors=["#4CAF50", "#FF5722"], wedgeprops=dict(width=0.4))
+            ax.set_title("📊 Win Probability", color="orange")
+            st.pyplot(fig)
+
+            # --- Results ---
+            st.success(f"✅ {batting_team} has a `{round(win * 100)}%` chance to win!")
+            st.info(f"❌ {bowling_team} has a `{round(loss * 100)}%` chance to win.")
+
+            st.markdown("### 📈 Match Stats")
+            st.markdown(f"**Runs Left:** `{runs_left}`")
+            st.markdown(f"**Balls Left:** `{balls_left}`")
+            st.markdown(f"**Wickets Remaining:** `{wickets_remaining}`")
+            st.markdown(f"**Current Run Rate (CRR):** `{crr:.2f}`")
+            st.markdown(f"**Required Run Rate (RRR):** `{rrr:.2f}`")
+
+        except Exception as e:
+            st.error(f"⚠️ Prediction error: {e}")
