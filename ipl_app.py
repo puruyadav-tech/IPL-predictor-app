@@ -2,8 +2,14 @@ import streamlit as st
 import pickle
 import pandas as pd
 import os
-import sklearn
-from joblib import load
+
+try:
+    import sklearn
+    from joblib import load
+except ModuleNotFoundError:
+    st.error("❌ The 'scikit-learn' package is not installed in the environment. Please add 'scikit-learn' to requirements.txt and redeploy.")
+    st.stop()
+
 
 # Load model
 pipe = load('mdl.pkl')
