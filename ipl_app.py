@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import sklearn
-from  joblib import load import load
+from  joblib import load 
 
 
 
