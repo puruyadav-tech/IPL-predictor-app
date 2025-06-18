@@ -1,8 +1,8 @@
 import streamlit as st
 import pickle
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
-from joblib import load
 
 # --- TEAM LOGO MAPPING ---
 team_logos = {
@@ -18,14 +18,12 @@ team_logos = {
 
 teams = list(team_logos.keys())
 
-cities = [
-    'Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
-    'Chandigarh', 'Jaipur', 'Chennai', 'Cape Town', 'Port Elizabeth',
-    'Durban', 'Centurion', 'East London', 'Johannesburg', 'Kimberley',
-    'Bloemfontein', 'Ahmedabad', 'Cuttack', 'Nagpur', 'Dharamsala',
-    'Visakhapatnam', 'Pune', 'Raipur', 'Ranchi', 'Abu Dhabi',
-    'Sharjah', 'Mohali', 'Bengaluru'
-]
+cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
+          'Chandigarh', 'Jaipur', 'Chennai', 'Cape Town', 'Port Elizabeth',
+          'Durban', 'Centurion', 'East London', 'Johannesburg', 'Kimberley',
+          'Bloemfontein', 'Ahmedabad', 'Cuttack', 'Nagpur', 'Dharamsala',
+          'Visakhapatnam', 'Pune', 'Raipur', 'Ranchi', 'Abu Dhabi',
+          'Sharjah', 'Mohali', 'Bengaluru']
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="IPL Win Predictor", layout="wide")
@@ -62,24 +60,21 @@ if st.button('Predict Win Probability'):
     if batting_team == bowling_team:
         st.error("Batting and bowling teams cannot be the same.")
     else:
-        # Check if model exists
+        # Load model
         if not os.path.exists("mdl.pkl"):
-            st.error("❌ Model file 'mdl.pkl' not found. Please place it in the app folder.")
+            st.error("❌ Model file 'mdl.pkl' not found. Please place it in the same directory.")
             st.stop()
 
-        # Load model without importing sklearn explicitly
-   
+        with open('mdl.pkl', 'rb') as file:
+            pipe = pickle.load(file)
 
-        pipe = load('mdl.pkl')
-
-        # Calculate features
+        # Compute match stats
         runs_left = target - score
         balls_left = 120 - int(overs * 6)
         wickets_remaining = 10 - wickets
         crr = score / overs if overs > 0 else 0
         rrr = (runs_left * 6) / balls_left if balls_left > 0 else 0
 
-        # Prepare dataframe input
         input_df = pd.DataFrame({
             'batting_team': [batting_team],
             'bowling_team': [bowling_team],
@@ -93,23 +88,29 @@ if st.button('Predict Win Probability'):
         })
 
         try:
-            # Predict probabilities
             result = pipe.predict_proba(input_df)
             loss = result[0][0]
             win = result[0][1]
 
-            # Show textual results instead of pie chart
-            st.markdown(f"### 🏆 Win Probability")
-            st.write(f"- **{batting_team}**: {win * 100:.1f}% chance to win")
-            st.write(f"- **{bowling_team}**: {loss * 100:.1f}% chance to win")
+            # Pie Chart
+            fig, ax = plt.subplots()
+            ax.pie([win, loss], labels=[batting_team, bowling_team], autopct='%1.1f%%',
+                   colors=["#4CAF50", "#FF5722"])
+            ax.set_title('📊 Win Probability')
+            st.pyplot(fig)
 
-            # Show match stats summary
-            st.markdown("### 📊 Match Stats")
-            st.write(f"- Runs Left: {runs_left}")
-            st.write(f"- Balls Left: {balls_left}")
-            st.write(f"- Wickets Remaining: {wickets_remaining}")
-            st.write(f"- Current Run Rate (CRR): {crr:.2f}")
-            st.write(f"- Required Run Rate (RRR): {rrr:.2f}")
+            # Display results
+            st.success(f"🏆 {batting_team} has a {round(win * 100)}% chance to win!")
+            st.info(f"💀 {bowling_team} has a {round(loss * 100)}% chance to win.")
+
+            # Match stats summary
+            st.markdown("### 📈 Match Stats")
+            st.write(f"🎯 Runs Left: `{runs_left}`")
+            st.write(f"🕒 Balls Left: `{balls_left}`")
+            st.write(f"🧱 Wickets Remaining: `{wickets_remaining}`")
+            st.write(f"⚡ Current Run Rate (CRR): `{crr:.2f}`")
+            st.write(f"🔥 Required Run Rate (RRR): `{rrr:.2f}`")
 
         except Exception as e:
-            st.error(f"⚠️ Prediction error: {e}")
+            st.error(f"Prediction error: {e}")
+
