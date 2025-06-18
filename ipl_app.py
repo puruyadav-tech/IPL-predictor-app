@@ -3,11 +3,11 @@ import pandas as pd
 import pickle
 import os
 
-# --- INLINE CSS IPL THEME + HEADING COLORS ---
+# --- BLUE THEME INLINE CSS ---
 st.markdown("""
     <style>
     body {
-      background: linear-gradient(to bottom, #10172a, #1f3260);
+      background: linear-gradient(to bottom right, #1e3c72, #2a5298);
       color: white;
       font-family: 'Segoe UI', sans-serif;
     }
@@ -23,7 +23,7 @@ st.markdown("""
     .subtitle {
       text-align: center;
       font-size: 1.2rem;
-      color: #cccccc;
+      color: #dddddd;
       margin-bottom: 2rem;
     }
     .card {
@@ -46,19 +46,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- TEAM LOGO MAPPING ---
-team_logos = {
-    'Sunrisers Hyderabad': 'https://i.imgur.com/kNjX8Xz.png',
-    'Mumbai Indians': 'https://i.imgur.com/hzT4D2O.png',
-    'Royal Challengers Bangalore': 'https://i.imgur.com/VcG8AfH.png',
-    'Kolkata Knight Riders': 'https://i.imgur.com/og5RzEH.png',
-    'Kings XI Punjab': 'https://i.imgur.com/9u0IqBG.png',
-    'Chennai Super Kings': 'https://i.imgur.com/4p6Un7d.png',
-    'Rajasthan Royals': 'https://i.imgur.com/XBRdhbC.png',
-    'Delhi Capitals': 'https://i.imgur.com/6zP4NML.png'
-}
+# --- TEAM LIST ---
+teams = [
+    'Sunrisers Hyderabad', 'Mumbai Indians', 'Royal Challengers Bangalore',
+    'Kolkata Knight Riders', 'Kings XI Punjab', 'Chennai Super Kings',
+    'Rajasthan Royals', 'Delhi Capitals'
+]
 
-teams = list(team_logos.keys())
 cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
           'Chandigarh', 'Jaipur', 'Chennai', 'Cape Town', 'Port Elizabeth',
           'Durban', 'Centurion', 'East London', 'Johannesburg', 'Kimberley',
@@ -66,7 +60,7 @@ cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
           'Visakhapatnam', 'Pune', 'Raipur', 'Ranchi', 'Abu Dhabi',
           'Sharjah', 'Mohali', 'Bengaluru']
 
-# --- STREAMLIT PAGE CONFIG ---
+# --- PAGE HEADER ---
 st.set_page_config(page_title="IPL Win Predictor", layout="wide")
 st.markdown("<h1 class='title'>🏏 IPL Win Predictor</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Predict the match outcome based on live match stats</p>", unsafe_allow_html=True)
@@ -76,16 +70,14 @@ st.markdown("<div class='card'>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
     batting_team = st.selectbox('Select Batting Team', sorted(teams))
-    st.image(team_logos[batting_team], width=100)
 with col2:
     bowling_team = st.selectbox('Select Bowling Team', sorted(teams))
-    st.image(team_logos[bowling_team], width=100)
 st.markdown("</div>", unsafe_allow_html=True)
 
 if batting_team == bowling_team:
     st.warning("⚠️ Batting and Bowling teams must be different.")
 
-# --- MATCH INPUTS ---
+# --- MATCH DETAILS ---
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 selected_city = st.selectbox('Select Host City', sorted(cities))
 target = st.number_input('🎯 Target Score', min_value=0, step=1)
@@ -99,7 +91,7 @@ with col5:
     wickets = st.number_input('💥 Wickets Fallen', min_value=0, max_value=10, step=1)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# --- PREDICTION ---
+# --- PREDICT WIN ---
 if st.button("🚀 Predict Match Outcome"):
     if batting_team == bowling_team:
         st.error("❌ Batting and bowling teams cannot be the same.")
