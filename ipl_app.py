@@ -1,6 +1,9 @@
 import streamlit as st
 import pickle
 import pandas as pd
+import matplotlib.pyplot as plt
+import os
+import sklearn
 
 # Load model
 pipe = pickle.load(open('mdl.pkl', 'rb'))
