@@ -2,7 +2,6 @@ import streamlit as st
 import pickle
 import pandas as pd
 import os
-
 try:
     import sklearn
     from joblib import load
