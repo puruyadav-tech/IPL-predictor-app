@@ -1,8 +1,50 @@
 import streamlit as st
-import pickle
 import pandas as pd
-import matplotlib.pyplot as plt
+import pickle
 import os
+
+# --- INLINE CSS IPL THEME + HEADING COLORS ---
+st.markdown("""
+    <style>
+    body {
+      background: linear-gradient(to bottom, #10172a, #1f3260);
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .title {
+      background: linear-gradient(to right, #fbbf24, #f97316, #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 3.5rem;
+      text-align: center;
+      font-weight: 800;
+      margin-top: 0.5rem;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 1.2rem;
+      color: #cccccc;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    }
+    .result-card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 30px;
+      text-align: center;
+      font-size: 1.4rem;
+      color: #f1f1f1;
+      box-shadow: 0 0 25px rgba(255,255,255,0.1);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- TEAM LOGO MAPPING ---
 team_logos = {
@@ -17,7 +59,6 @@ team_logos = {
 }
 
 teams = list(team_logos.keys())
-
 cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
           'Chandigarh', 'Jaipur', 'Chennai', 'Cape Town', 'Port Elizabeth',
           'Durban', 'Centurion', 'East London', 'Johannesburg', 'Kimberley',
@@ -25,50 +66,49 @@ cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
           'Visakhapatnam', 'Pune', 'Raipur', 'Ranchi', 'Abu Dhabi',
           'Sharjah', 'Mohali', 'Bengaluru']
 
-# --- PAGE CONFIG ---
+# --- STREAMLIT PAGE CONFIG ---
 st.set_page_config(page_title="IPL Win Predictor", layout="wide")
-st.title('🏏 IPL Win Predictor')
-st.markdown("### Predict the match outcome based on live match stats")
+st.markdown("<h1 class='title'>🏏 IPL Win Predictor</h1>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Predict the match outcome based on live match stats</p>", unsafe_allow_html=True)
 
 # --- TEAM SELECTION ---
+st.markdown("<div class='card'>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
     batting_team = st.selectbox('Select Batting Team', sorted(teams))
-    st.image(team_logos[batting_team], width=120, caption=batting_team)
-
+    st.image(team_logos[batting_team], width=100)
 with col2:
     bowling_team = st.selectbox('Select Bowling Team', sorted(teams))
-    st.image(team_logos[bowling_team], width=120, caption=bowling_team)
+    st.image(team_logos[bowling_team], width=100)
+st.markdown("</div>", unsafe_allow_html=True)
 
 if batting_team == bowling_team:
     st.warning("⚠️ Batting and Bowling teams must be different.")
 
 # --- MATCH INPUTS ---
+st.markdown("<div class='card'>", unsafe_allow_html=True)
 selected_city = st.selectbox('Select Host City', sorted(cities))
-target = st.number_input('Target Score', min_value=0, step=1)
+target = st.number_input('🎯 Target Score', min_value=0, step=1)
 
 col3, col4, col5 = st.columns(3)
 with col3:
-    score = st.number_input('Current Score', min_value=0, step=1)
+    score = st.number_input('📊 Current Score', min_value=0, step=1)
 with col4:
-    overs = st.number_input('Overs Completed', min_value=0.0, step=0.1, format="%.1f")
+    overs = st.number_input('🕒 Overs Completed', min_value=0.0, step=0.1, format="%.1f")
 with col5:
-    wickets = st.number_input('Wickets Fallen', min_value=0, max_value=10, step=1)
+    wickets = st.number_input('💥 Wickets Fallen', min_value=0, max_value=10, step=1)
+st.markdown("</div>", unsafe_allow_html=True)
 
 # --- PREDICTION ---
-if st.button('Predict Win Probability'):
+if st.button("🚀 Predict Match Outcome"):
     if batting_team == bowling_team:
-        st.error("Batting and bowling teams cannot be the same.")
+        st.error("❌ Batting and bowling teams cannot be the same.")
+    elif not os.path.exists("mdl.pkl"):
+        st.error("Model file 'mdl.pkl' not found.")
     else:
-        # Load model
-        if not os.path.exists("mdl.pkl"):
-            st.error("❌ Model file 'mdl.pkl' not found. Please place it in the same directory.")
-            st.stop()
+        with open('mdl.pkl', 'rb') as f:
+            pipe = pickle.load(f)
 
-        with open('mdl.pkl', 'rb') as file:
-            pipe = pickle.load(file)
-
-        # Compute match stats
         runs_left = target - score
         balls_left = 120 - int(overs * 6)
         wickets_remaining = 10 - wickets
@@ -87,30 +127,12 @@ if st.button('Predict Win Probability'):
             'rrr': [rrr]
         })
 
-        try:
-            result = pipe.predict_proba(input_df)
-            loss = result[0][0]
-            win = result[0][1]
+        result = pipe.predict_proba(input_df)
+        loss = result[0][0]
+        win = result[0][1]
 
-            # Pie Chart
-            fig, ax = plt.subplots()
-            ax.pie([win, loss], labels=[batting_team, bowling_team], autopct='%1.1f%%',
-                   colors=["#4CAF50", "#FF5722"])
-            ax.set_title('📊 Win Probability')
-            st.pyplot(fig)
-
-            # Display results
-            st.success(f"🏆 {batting_team} has a {round(win * 100)}% chance to win!")
-            st.info(f"💀 {bowling_team} has a {round(loss * 100)}% chance to win.")
-
-            # Match stats summary
-            st.markdown("### 📈 Match Stats")
-            st.write(f"🎯 Runs Left: `{runs_left}`")
-            st.write(f"🕒 Balls Left: `{balls_left}`")
-            st.write(f"🧱 Wickets Remaining: `{wickets_remaining}`")
-            st.write(f"⚡ Current Run Rate (CRR): `{crr:.2f}`")
-            st.write(f"🔥 Required Run Rate (RRR): `{rrr:.2f}`")
-
-        except Exception as e:
-            st.error(f"Prediction error: {e}")
-
+        st.markdown(
+            f"<div class='result-card'><h3>🏆 {batting_team} Chance to Win: {round(win*100)}%</h3>"
+            f"<h4>💀 {bowling_team} Chance: {round(loss*100)}%</h4></div>",
+            unsafe_allow_html=True
+        )
