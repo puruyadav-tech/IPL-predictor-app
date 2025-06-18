@@ -2,6 +2,7 @@ import streamlit as st
 import pickle
 import pandas as pd
 import os
+from joblib import load
 
 # --- TEAM LOGO MAPPING ---
 team_logos = {
@@ -67,8 +68,9 @@ if st.button('Predict Win Probability'):
             st.stop()
 
         # Load model without importing sklearn explicitly
-        with open('mdl.pkl', 'rb') as file:
-            pipe = pickle.load(file)
+   
+
+        pipe = load('mdl.pkl')
 
         # Calculate features
         runs_left = target - score
